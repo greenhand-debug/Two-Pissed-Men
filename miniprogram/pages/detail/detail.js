@@ -1,27 +1,154 @@
 const app = getApp()
 const db = wx.cloud.database()
 const _ = db.command;
+const todo2=db.collection("zan")
+const todo=db.collection("forum")
 var that = null;
 Page({
+  data:{
+myid:{},
+img:null,
+btn:true
+ },
+ pageData:{
+
+},
+praise:function(){
+  if(that.data.btn){
+  todo2.where({
+    tiezi:that.data.item._id,//保证是这个帖子
+    _openid:this.data.myid//用户openid和帖主openid
+  }).get().then(
+    res=>{
+      if(res.data[0]){//如果存在 不存在就建立一个记录
+        //console.log(res.data[0]._id)
+        if(res.data[0].state==false){//未点赞
+          todo.doc(that.data.item._id).update({
+            data: {
+              praise: _.inc(1),
+            },
+          })
+          todo2.doc(res.data[0]._id).update({
+            data: {
+              state:true,
+            },
+          })
+          that.setData({
+            img: "../../images/线性爱心点赞图标.svg"
+          })
+          setTimeout(function () {
+            that.setData({
+              img: "../../images/线性斜领子图标.svg"
+            })
+            }, 1000)
+        }
+        if(res.data[0].state==true){
+          todo.doc(that.data.item._id).update({
+            data: {
+              praise: _.inc(-1),
+            },
+          })
+          todo2.doc(res.data[0]._id).update({
+            data: {
+              state:false,
+            },
+          })
+
+          that.setData({
+            img: "../../images/爆炸.gif"
+          })
+          setTimeout(function () {
+            that.setData({
+              img: "../../images/线性点赞图标2.svg"
+            })
+            }, 1000)
+        }
+      }
+      else{//如果数据库里还没这个人的赞
+        todo2.add({
+          data:{
+              state:true,
+              tiezi:that.data.item._id
+          }
+          
+        })
+        todo.doc(that.data.item._id).update({
+          data: {
+            praise: _.inc(1),
+          },
+        })
+        that.setData({
+          img: "../../images/线性爱心点赞图标.svg"
+        })
+        setTimeout(function () {
+          that.setData({
+            img: "../../images/线性斜领子图标.svg"
+          })
+          }, 1000)
+      }
+      });
+      that.setData({
+        btn:false
+      })
+      setTimeout(function () {
+        todo.doc(that.data.item._id).get().then(res=>{
+          that.data.item.praise=res.data.praise;
+          that.setData({
+            item:that.data.item,
+        btn:true
+          })
+        })
+       }, 1000)
+      }
+},
+
   onLoad(){
     that = this;
-    that.setData({
-      item:app.globalData.item
+    wx.cloud.callFunction({
+      name: 'login1',
+      data: {},
+      success: res2 => {
+        //console.log('[云函数] [login] user openid: ', res2.result.openid)
+        this.setData({
+          myid:res2.result.openid
+        })
+      },
+      fail: err => {
+        console.error('[云函数] [login] 调用失败', err)
+        }
     });
+    that.setData({
+      item:app.globalData.item,
+     
+    });
+    todo2.where({
+      tiezi:that.data.item._id,//保证是这个帖子
+      _openid:this.data.myid//用户openid和帖主openid
+    }).get().then(res=>{
+      if(res.data[0]){
+        if(res.data[0].state==false){
+          that.setData({
+            img: "../../images/线性点赞图标2.svg"
+          })
+        }
+        else{
+          that.setData({
+            img: "../../images/线性斜领子图标.svg"
+          })
+        }
+      }
+      else{
+        that.setData({
+          img: "../../images/线性点赞图标2.svg"
+        })
+      }
+    })
   },
   onShow(){
     that.init();
     wx.getSetting({
       success(res){
-        if(res.authSetting['scope.userInfo']==true){
-          wx.getUserInfo({
-            success(res){
-              that.setData({
-                myimg:res.userInfo.avatarUrl
-              });
-            }
-          })
-        }
+       
       }
     })
   },
@@ -31,7 +158,6 @@ Page({
       pid:that.data.item._id
     }).get()
     .then(result => {
-      console.log(result);
       let items = result.data.map(item =>{
         item.date = app.nowdate(item.date);
         return item;
@@ -52,9 +178,10 @@ Page({
   comment(e){
     //提交评论
     if(e.detail.userInfo){
+      
       that.authorname = e.detail.userInfo.nickName;
       that.authorimg = e.detail.userInfo.avatarUrl;
-      if(that.data.text.length>5){
+      if(that.data.text.length>3){
         wx.showLoading({
           title: '评论中',
           mask:true
@@ -77,6 +204,14 @@ Page({
               }
             }).then(result => {
               that.init();
+              wx.cloud.callFunction({
+                name: 'msgMe1',
+                data:{
+                  commentId:result._id,
+                  openid:that.data.item._openid
+
+                }
+              })
             })
             //TODO 评论帖子
           },
@@ -126,9 +261,6 @@ Page({
     })
   },
   removemain(e){
-    //删除帖子，此删除需要在无评论的情况下才可以删除，如果要做到全删除，请使用云函数来进行
-    //在数据库安全规则中，设置的为所有可读，仅创建和管理员可读写。评论有其他创建者的话，则无法从小程序端完成删除
-    //绝对不建议为了简化开发，而设置所有可读写策略，会增大危险性
     wx.showModal({
       title: '提示',
       content: '是否要删除该帖子',
@@ -157,5 +289,22 @@ Page({
       }
     });
 
-  }
+  },
+  viewLocation:function(){
+    wx.openLocation({
+      latitude: that.data.item.latitude,
+      longitude: that.data.item.longitude,
+      name:that.data.item.name,
+      address:that.data.item.address,
+
+    })
+  },
+  getRight:function(e){
+    wx.requestSubscribeMessage({
+      tmplIds: ['9ykXNArFlm8e_M2ZJkXS5GiRYKW6P31NjmVxkErZKmQ'],
+     success (res) { 
+     }
+    })
+
+ },
 })

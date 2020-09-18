@@ -71,3 +71,7 @@ page{
   width: 150px;
   margin-right: 2%;  
 }
+.image1{
+  height: 50rpx;
+  width: 50rpx;
+}

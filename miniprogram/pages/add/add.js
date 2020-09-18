@@ -2,11 +2,23 @@ const app = getApp();
 const db = wx.cloud.database();
 const _ = db.command;
 var that = null;
+
 Page({
   data: {
     text: '',
-    photo: []
+    photo: [],
+    
+    
   },
+  pageData:{
+    name: {},
+    address:{},
+    latitude:{},
+    longitude:{}
+
+  },
+ 
+ 
   onLoad(options) {
     that = this;
   },
@@ -19,12 +31,13 @@ Page({
     //选择图片，一共8张
     wx.chooseImage({
       count: 8 - that.data.photo.length,
-      sizeType: ['original', 'compressed'],
+      sizeType: ['compressed'],
       sourceType: ['album', 'camera'],
       success: res => {
         //选择完成后，把图片列表追加到已有的列表中
         that.setData({
-          photo: that.data.photo.concat(res.tempFilePaths)
+          photo: that.data.photo.concat(res.tempFilePaths),
+          
         })
       }
     })
@@ -34,6 +47,25 @@ Page({
     wx.previewImage({
       urls: that.data.photo,
       current: e.currentTarget.dataset.url
+    })
+  },
+  chooseLocation:function(e){
+    wx.chooseLocation({
+
+      success: res => {
+        
+       // that.setData({
+         // address: that.data.res.address
+
+       // }) 
+        //console.log(res) 
+        that.pageData.name = res.name,
+        that.pageData.address = res.address,
+        that.pageData.latitude = res.latitude,
+        that.pageData.longitude = res.longitude
+       
+
+      }
     })
   },
   removeimg(e) {
@@ -54,6 +86,7 @@ Page({
     })
   },
   done(e){
+  
     //开始执行上传
     console.log(e.detail.userInfo)
     if(e.detail.userInfo){
@@ -153,10 +186,21 @@ Page({
         content:that.data.text,
         image:albumPhotos,
         date:new Date(),
+        name:that.pageData.name,
+        address:that.pageData.address,
+        latitude:that.pageData.latitude,
+        longitude:that.pageData.longitude,
+        praise:0,
         authorname:that.authorname,
         authorimg:that.authorimg
       }
     }).then(result => {
+      db.collection('zan').add({
+        data:{
+            state:false,
+            tiezi:result._id
+        }
+      })
       wx.hideLoading();
       wx.navigateBack({
         delta:1

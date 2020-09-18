@@ -23,7 +23,7 @@
 	</div>
 </body>
 <script>
-	const envId = '';//在此填写云开发环境ID
+	const envId = 'xly-yvmlt';//在此填写云开发环境ID
 	const app = tcb.init({
 		env: envId
 	});//初始化云开发
@@ -229,10 +229,15 @@
 			app.getTempFileURL({
 				fileList: src
 			}, function (err, res) {
-				let arr = res.fileList.map(item=>{
+				if(res){let arr = res.fileList.map(item=>{
 					return item.tempFileURL;
 				})
 				resolve(arr);
+				}
+				else{
+					resolve([]);
+				}
+				
 			});
 		});
 	}

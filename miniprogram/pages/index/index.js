@@ -71,7 +71,7 @@ Page({
     //TODO 加载帖子列表
     db.collection('forum').get()
     .then(result => {
-      console.log(result);
+      //console.log(result);
       let items = result.data.map(item =>{
         item.date = app.nowdate(item.date);
         return item;
