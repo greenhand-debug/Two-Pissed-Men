@@ -1,6 +1,4 @@
 const cloud = require('wx-server-sdk')
-//const appId = 'wx4023bfd70b98ba84'; // 小程序 appId
-//const secret = '69599eb98a51ac1a2904809611b32e29'; // 小程序 secret
 cloud.init({
   env: cloud.DYNAMIC_CURRENT_ENV
 })
